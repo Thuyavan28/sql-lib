@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Borrowed Books</title>
+  <link rel="stylesheet" href="styles.css" />
+ 
+</head>
+<body>
+  <style>
+    /* General Styling */
+body {
+    font-family: 'Poppins', sans-serif;
+    text-align: center;
+    background: linear-gradient(120deg, #6a11cb, #2575fc);
+    color: white;
+}
+
+
+.cart-container {
+    width: 80%;
+    margin: auto;
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.3);
+    color: black;
+}
+
+h1, h2 {
+    color: #2575fc;
+    margin-bottom: 20px;
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+.book-item {
+    background: #f1f1f1;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+    transition: 0.3s ease-in-out;
+}
+
+.book-item:hover {
+    transform: scale(1.05);
+}
+
+.form-wrapper {
+    margin-top: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+}
+
+input {
+    width: 80%;
+    padding: 12px;
+    border-radius: 5px;
+    margin-top: 10px;
+    border: 1px solid #ccc;
+}
+
+button {
+    background: #2575fc;
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s ease;
+    font-size: 16px;
+    width: 85%;
+    margin-top: 10px;
+}
+
+button:hover {
+    background: #6a11cb;
+}
+
+.total {
+    font-size: 18px;
+    font-weight: bold;
+    color: #6a11cb;
+    margin-top: 15px;
+}
+
+/* Receipt Page Styles */
+.receipt-container {
+    width: 80%;
+    margin: auto;
+    padding: 30px;
+    background: linear-gradient(120deg, #FF8C00, #FF4500);
+    color: white;
+    border-radius: 10px;
+    box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.3);
+}
+
+.print-btn {
+    background: #FF4500;
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+}
+
+.print-btn:hover {
+    background: #FF8C00;
+}
+z
+  </style>
+  <div class="cart-container">
+    <h1>📚 Borrowed Books</h1>
+    <ul id="borrowed-items"></ul>
+    <p class="total"><strong>Total Books:</strong> <span id="total-books">0</span></p>
+
+    <div class="form-wrapper">
+      <h2>🔑 Library Membership Registration</h2>
+      <form id="registration-form" action="register.php" method="POST">
+        <input type="text" name="name" id="name" placeholder="Full Name" required />
+        <input type="email" name="email" id="email" placeholder="Email Address" required />
+        <input type="tel" name="phone" id="phone" placeholder="Phone Number" required />
+        <button type="submit">Register</button>
+      </form>
+    </div>
+
+    <a id="view-receipt-link" href="receipt.html" style="display:none;">
+      <button id="view-receipt-btn">View Receipt</button>
+    </a>
+  </div>
+
+
+
+
+
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+  const supabaseUrl = 'https://npnxljwgfxcrjgnyquso.supabase.co';
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5wbnhsandnZnhjcmpnbnlxdXNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY2MDcyMTksImV4cCI6MjA2MjE4MzIxOX0.nuuUyv0NMLoGTeWFOt_oTbvsyGMbhgtv_1o2yuFxpxg';
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // Load borrowed books
+  let borrowedBooks = JSON.parse(localStorage.getItem("borrowedBooks")) || [];
+  localStorage.setItem("borrowedBooks", JSON.stringify(borrowedBooks));
+
+  const bookList = document.getElementById("borrowed-items");
+  let total = 0;
+  borrowedBooks.forEach(book => {
+    const li = document.createElement("li");
+    li.className = "book-item";
+    li.textContent = `📖 ${book.title} - ${book.author} x ${book.quantity}`;
+    bookList.appendChild(li);
+    total += book.quantity;
+  });
+  document.getElementById("total-books").textContent = total;
+
+  // Form submit handler
+  document.getElementById("registration-form").addEventListener("submit", async function (event) {
+    event.preventDefault();
+    const name = document.getElementById("name").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+
+    if (name && email && phone) {
+      const userDetails = { name, email, phone };
+      localStorage.setItem("userDetails", JSON.stringify(userDetails));
+      document.getElementById("view-receipt-link").style.display = 'block';
+      alert("Registration successful! Now you can view the receipt.");
+
+      try {
+        const { data: userData, error: userError } = await supabase
+          .from("user_details")
+          .insert([{ name, email, phone }])
+          .select();
+
+        if (userError) {
+          console.error("Supabase user insert error:", userError.message);
+          return;
+        }
+
+        const userId = userData?.[0]?.id;
+
+        for (let book of borrowedBooks) {
+          const title = book.title.trim();
+          const author = book.author.trim();
+
+          const { data: bookData, error: bookError } = await supabase
+            .from("book_details")
+            .select("id")
+            .eq("title", title)
+            .eq("author", author)
+            .single();
+
+          if (bookError || !bookData) {
+            console.warn(`Book not found: ${title} - ${bookError?.message}`);
+            continue;
+          }
+
+          const bookId = bookData.id;
+
+          const { error: linkError } = await supabase
+            .from("user_book_link")
+            .insert([{ user_id: userId, book_id: bookId, quantity: book.quantity }]);
+
+          if (linkError) {
+            console.error(`Failed to link book (${title}) to user:`, linkError.message);
+          }
+        }
+        
+        console.log(JSON.parse(localStorage.getItem("userDetails")));
+        console.log(JSON.parse(localStorage.getItem("borrowedBooks")));
+        console.log("Inserted into user_details:", userData);
+        console.log("✅ All data processed.");
+      } catch (err) {
+        console.error("Unexpected Supabase error:", err);
+      }
+    } else {
+      alert("Please fill in all fields!");
+    }
+  });
+</script>
+
+</body>
+</html>
